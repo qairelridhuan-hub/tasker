@@ -35,7 +35,7 @@ export default function Login() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.back} onPress={() => router.back()} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.back} onPress={() => router.canGoBack() ? router.back() : router.replace('/onboarding')} activeOpacity={0.7}>
             <ChevronLeft color="#000" size={26} strokeWidth={2} />
           </TouchableOpacity>
 
@@ -60,7 +60,7 @@ export default function Login() {
               <Text style={styles.fieldLabel}>Password</Text>
               <View style={styles.passWrap}>
                 <TextInput
-                  style={[styles.input, { flex: 1, borderWidth: 0, paddingRight: 0 }]}
+                  style={styles.passInput}
                   placeholder="••••••••"
                   placeholderTextColor="#aaa"
                   secureTextEntry={!showPass}
@@ -110,8 +110,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, color: '#666', marginBottom: 36 },
   form: { gap: 16 },
   fieldLabel: { fontSize: 12, color: '#999', marginBottom: 6, fontWeight: '500' },
-  input: { height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e0e0e0', paddingHorizontal: 16, fontSize: 15, color: '#000', backgroundColor: '#fff' },
-  passWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e0e0e0', paddingHorizontal: 16, backgroundColor: '#fff' },
+  input: { height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e0e0e0', paddingHorizontal: 16, fontSize: 15, color: '#000', backgroundColor: '#fff', marginHorizontal: 1 },
+  passWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e0e0e0', paddingHorizontal: 16, backgroundColor: '#fff', marginHorizontal: 1 },
+  passInput: { flex: 1, fontSize: 15, color: '#000', paddingRight: 8 },
   eyeBtn: { paddingLeft: 8 },
   error: { fontSize: 13, color: '#dc2626' },
   btn: { height: 54, borderRadius: 14, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', marginTop: 4 },

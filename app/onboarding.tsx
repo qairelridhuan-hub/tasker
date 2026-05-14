@@ -341,7 +341,7 @@ const SLIDES = [
   },
 ];
 
-type Phase = 'slides' | 'splash';
+type Phase = 'slides' | 'splash' | null;
 
 function CountUpStat({ target, prefix, suffix, animKey, style }: {
   target: number; prefix: string; suffix: string; animKey: number; style?: object;
@@ -364,8 +364,8 @@ function CountUpStat({ target, prefix, suffix, animKey, style }: {
 
 export default function Onboarding() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [phase, setPhase] = useState<Phase>('slides');
+  const { user, loading } = useAuth();
+  const [phase, setPhase] = useState<Phase>(null);
   const [index, setIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState<number | null>(null);
   const [iconAnimKey, setIconAnimKey] = useState(0);
@@ -399,6 +399,11 @@ export default function Onboarding() {
   const taglineO    = useRef(new Animated.Value(0)).current;
   const btnO        = useRef(new Animated.Value(0)).current;
   const btnY        = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    if (loading) return;
+    setPhase(user ? 'splash' : 'slides');
+  }, [loading, user]);
 
   function resetEntry() {
     tagY.setValue(-16); tagO.setValue(0);
@@ -503,6 +508,8 @@ export default function Onboarding() {
     ]).start();
   }, [phase]);
 
+  if (!phase) return null;
+
   const slide = SLIDES[index];
 
   // ── Slides phase ──────────────────────────────────────────────────
@@ -589,9 +596,11 @@ export default function Onboarding() {
     <Animated.View style={[styles.splash, { opacity: splashO }]}>
       <StatusBar style="dark" />
 
-      <TouchableOpacity style={styles.splashBack} onPress={() => { setIndex(0); setPhase('slides'); }} activeOpacity={0.7}>
-        <ChevronLeft color="#bbb" size={22} strokeWidth={2} />
-      </TouchableOpacity>
+      {!user && (
+        <TouchableOpacity style={styles.splashBack} onPress={() => { setIndex(0); setPhase('slides'); }} activeOpacity={0.7}>
+          <ChevronLeft color="#bbb" size={22} strokeWidth={2} />
+        </TouchableOpacity>
+      )}
 
       {/* Logo */}
       <View style={styles.logoWrap}>
@@ -626,12 +635,20 @@ export default function Onboarding() {
 
       {/* Buttons */}
       <Animated.View style={{ opacity: btnO, transform: [{ translateY: btnY }], width: '100%', alignItems: 'center', gap: 16, marginTop: 8 }}>
-        <TouchableOpacity style={styles.signUpBtn} onPress={() => router.replace('/(auth)/signup')} activeOpacity={0.85}>
-          <Text style={styles.signUpText}>Get Started</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/(auth)/login')} activeOpacity={0.7}>
-          <Text style={styles.logInText}>Already have an account? Log in</Text>
-        </TouchableOpacity>
+        {user ? (
+          <TouchableOpacity style={styles.signUpBtn} onPress={() => router.replace('/(tabs)')} activeOpacity={0.85}>
+            <Text style={styles.signUpText}>Get Started</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity style={styles.signUpBtn} onPress={() => router.replace('/(auth)/signup')} activeOpacity={0.85}>
+              <Text style={styles.signUpText}>Get Started</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.replace('/(auth)/login')} activeOpacity={0.7}>
+              <Text style={styles.logInText}>Already have an account? Log in</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </Animated.View>
     </Animated.View>
   );

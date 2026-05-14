@@ -2,7 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import {
   Modal, View, StyleSheet, TouchableWithoutFeedback,
   Animated, Dimensions, KeyboardAvoidingView, Platform,
+  TouchableOpacity,
 } from 'react-native';
+import { X } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
 
 const { height: SCREEN_H } = Dimensions.get('window');
@@ -47,6 +49,9 @@ export default function BottomSheet({ visible, onClose, children, snapHeight = S
         pointerEvents="box-none"
       >
         <Animated.View style={[styles.sheet, { height: snapHeight, transform: [{ translateY }] }]}>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
+            <X size={20} color={Colors.black} strokeWidth={2.5} />
+          </TouchableOpacity>
           {children}
         </Animated.View>
       </KeyboardAvoidingView>
@@ -68,5 +73,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 20,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.ultraLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

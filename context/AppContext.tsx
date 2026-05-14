@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Task, Mood, FocusSession } from './types';
 import {
   subscribeTasks,
@@ -7,6 +7,7 @@ import {
   deleteTask as fbDeleteTask,
 } from '../firebase/tasks';
 import { useAuth } from './AuthContext';
+import { getMotivationalMessage, getAISuggestion, getTimeOfDay } from '../lib/ai';
 
 interface AppContextValue {
   tasks: Task[];
@@ -26,6 +27,9 @@ interface AppContextValue {
   focusHours: number;
   streak: number;
   aiMessage: string;
+  aiSuggestion: string;
+  aiLoading: boolean;
+  refreshAI: () => void;
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
@@ -35,13 +39,13 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const AI_MESSAGES: Record<string, string> = {
+const FALLBACK_MESSAGES: Record<string, string> = {
   focused: "You seem focused today. Let's tackle critical tasks first.",
-  tired: "You look tired today. Let's keep it light and simple.",
-  motivated: "Great energy today. Want to push into deep work mode?",
+  tired: "You look tired. Keep it light and simple today.",
+  motivated: "Great energy! Want to push into deep work mode?",
   anxious: "Take it one step at a time. You've got this.",
   stressed: "Let's simplify today. Focus on what truly matters.",
-  happy: "Great energy today. Want to push into deep work mode?",
+  happy: "Loving the energy! Let's make today count.",
   default: "Ready to make today count? Let's get started.",
 };
 
@@ -56,6 +60,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [focusSession, setFocusSession] = useState<FocusSession | null>(null);
   const [focusHours] = useState(2.5);
   const [streak] = useState(7);
+  const [aiMessage, setAiMessage] = useState(FALLBACK_MESSAGES.default);
+  const [aiSuggestion, setAiSuggestion] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!userId) { setTasks([]); setLoading(false); return; }
@@ -91,7 +99,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })
     .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
 
-  const aiMessage = mood ? AI_MESSAGES[mood.key] ?? AI_MESSAGES.default : AI_MESSAGES.default;
+  const criticalPending = tasks.filter(t =>
+    t.criticalLevel >= 4 && t.status !== 'Completed' && t.status !== 'Cancelled'
+  ).length;
+
+  const fetchAI = useCallback(async () => {
+    setAiLoading(true);
+    const timeOfDay = getTimeOfDay();
+    const params = {
+      mood: mood?.key ?? null,
+      stressLevel,
+      energyLevel,
+      completedToday: completedToday,
+      totalToday: todayTasks.length,
+      overdue: overdueTasks.length,
+      upcomingCount: upcomingDeadlines.length,
+      criticalPending,
+      timeOfDay,
+    };
+    const [msg, suggestion] = await Promise.all([
+      getMotivationalMessage(params),
+      getAISuggestion(params),
+    ]);
+    if (msg) setAiMessage(msg);
+    else setAiMessage(FALLBACK_MESSAGES[mood?.key ?? 'default'] ?? FALLBACK_MESSAGES.default);
+    if (suggestion) setAiSuggestion(suggestion);
+    setAiLoading(false);
+  }, [mood, stressLevel, energyLevel, todayTasks.length, overdueTasks.length, upcomingDeadlines.length, criticalPending, completedToday]);
+
+  // Refresh AI when mood/tasks change, debounced
+  useEffect(() => {
+    if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
+    aiTimerRef.current = setTimeout(fetchAI, 800);
+    return () => { if (aiTimerRef.current) clearTimeout(aiTimerRef.current); };
+  }, [mood, stressLevel, energyLevel, tasks.length]);
+
+  // Auto-refresh every 30 minutes
+  useEffect(() => {
+    const interval = setInterval(fetchAI, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchAI]);
 
   const addTask = useCallback(async (task: Omit<Task, 'id' | 'createdAt'>) => {
     await fbAddTask(userId!, task);
@@ -122,7 +169,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       tasks, loading, todayTasks, completedToday, overdueTasks, upcomingDeadlines,
       mood, setMood, stressLevel, setStressLevel, energyLevel, setEnergyLevel,
-      focusSession, setFocusSession, focusHours, streak, aiMessage,
+      focusSession, setFocusSession, focusHours, streak,
+      aiMessage, aiSuggestion, aiLoading, refreshAI: fetchAI,
       addTask, updateTask, deleteTask, completeTask, toggleSubtask,
     }}>
       {children}

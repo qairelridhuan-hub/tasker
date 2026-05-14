@@ -1,31 +1,49 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, LogBox } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+
+LogBox.ignoreLogs([
+  'Firestore',
+  '@firebase/firestore',
+  'Could not reach Cloud Firestore',
+  'AsyncStorage has been extracted',
+]);
+
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { AppProvider } from '../context/AppContext';
+import { ThemeProvider } from '../context/ThemeContext';
+
+SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const booted = useRef(false);
 
   useEffect(() => {
     if (loading) return;
-    const inAuth = segments[0] === '(auth)';
-    const inOnboarding = segments[0] === 'onboarding';
-    const inTabs = segments[0] === '(tabs)';
 
-    if (!user && !inAuth && !inOnboarding) {
+    if (!booted.current) {
+      booted.current = true;
       router.replace('/onboarding');
-    } else if (user && (inAuth || inOnboarding)) {
-      router.replace('/(tabs)');
+      SplashScreen.hideAsync();
+      return;
     }
-  }, [user, loading, segments]);
+
+    if (!user && segments[0] === '(tabs)') {
+      router.replace('/onboarding');
+    }
+  }, [loading, user, segments]);
+
+  if (loading) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'fade' }} initialRouteName="onboarding">
+      <Stack.Screen name="index" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(auth)" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="(tabs)" />
@@ -36,12 +54,14 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
-      <StatusBar style="dark" />
-      <AuthProvider>
-        <AppProvider>
-          <RootNavigator />
-        </AppProvider>
-      </AuthProvider>
+      <StatusBar style="auto" />
+      <ThemeProvider>
+        <AuthProvider>
+          <AppProvider>
+            <RootNavigator />
+          </AppProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }
