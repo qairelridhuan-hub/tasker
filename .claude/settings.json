@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/qairel -maxdepth 3 -name \"package.json\" -not -path \"*/node_modules/*\" 2>/dev/null | grep -i spendly)",
+      "Read(//Users/qairel/**)",
+      "Bash(npx create-expo-app@latest . --template blank-typescript)",
+      "Bash(npx create-expo-app@latest tasker-temp --template blank-typescript)",
+      "Bash(cp -r /Users/qairel/tasker-temp/. /Users/qairel/tasker/)",
+      "Bash(rm -rf /Users/qairel/tasker-temp)",
+      "Bash(node /Users/qairel/tasker/node_modules/.bin/expo --version)"
+    ]
+  }
+}
