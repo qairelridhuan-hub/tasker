@@ -12,11 +12,14 @@ import {
   subscribeStats,
   updateStreak,
   addFocusMinutes,
+  subscribeProfile,
+  saveFocusSession,
 } from '../firebase/userData';
 import { useAuth } from './AuthContext';
 import { getMotivationalMessage, getAISuggestion, getMoodAdvice, getTimeOfDay } from '../lib/ai';
 import { nextRepeatDate, scheduleTaskReminder } from '../lib/notifications';
 import { MOODS } from '../constants/data';
+import { seedTasks } from '../lib/seedTasks';
 
 interface AppContextValue {
   tasks: Task[];
@@ -35,6 +38,7 @@ interface AppContextValue {
   setFocusSession: (s: FocusSession | null) => void;
   focusHours: number;
   streak: number;
+  userName: string;
   aiMessage: string;
   aiSuggestion: string;
   aiLoading: boolean;
@@ -80,12 +84,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [focusSession, setFocusSessionState] = useState<FocusSession | null>(null);
   const [focusHours, setFocusHours] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [userName, setUserName] = useState('');
   const [aiMessage, setAiMessage] = useState(FALLBACK_MESSAGES.default);
   const [aiSuggestion, setAiSuggestion] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [moodAdvice, setMoodAdvice] = useState('');
   const [moodAdviceLoading, setMoodAdviceLoading] = useState(false);
   const [moodHistory, setMoodHistory] = useState<Record<string, string>>({});
+
+  // Subscribe user profile
+  useEffect(() => {
+    if (!userId) { setUserName(''); return; }
+    return subscribeProfile(userId, ({ name }) => {
+      if (name) setUserName(name);
+    });
+  }, [userId]);
 
   // Subscribe mood history from Firestore and restore today's mood
   useEffect(() => {
@@ -111,12 +124,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
   const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const seededRef = useRef(false);
+
   useEffect(() => {
     if (!userId) { setTasks([]); setLoading(false); return; }
     setLoading(true);
     const unsub = subscribeTasks(userId, (t) => {
       setTasks(t);
       setLoading(false);
+      // Seed once if user has no tasks yet
+      if (t.length === 0 && !seededRef.current) {
+        seededRef.current = true;
+        seedTasks(userId).catch(() => {});
+      }
     });
     return unsub;
   }, [userId]);
@@ -244,6 +264,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setFocusSessionState(prev => {
       if (prev && !s && prev.duration && userId) {
         addFocusMinutes(userId, prev.duration);
+        saveFocusSession(userId, prev).catch(() => {});
       }
       return s;
     });
@@ -262,7 +283,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       tasks, loading, todayTasks, completedToday, overdueTasks, upcomingDeadlines,
       mood, setMood, stressLevel, setStressLevel, energyLevel, setEnergyLevel,
-      focusSession, setFocusSession, focusHours, streak,
+      focusSession, setFocusSession, focusHours, streak, userName,
       aiMessage, aiSuggestion, aiLoading, refreshAI: fetchAI,
       moodAdvice, moodAdviceLoading, moodHistory,
       addTask, updateTask, deleteTask, completeTask, toggleSubtask,

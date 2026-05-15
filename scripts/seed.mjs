@@ -1,0 +1,195 @@
+// Run: node scripts/seed.mjs <YOUR_USER_ID>
+// Get your user ID from Firebase Console → Authentication → Users
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyAYligBUNty_d6lGYabmzMX7Jrsoaedves',
+  authDomain: 'tasker-5373a.firebaseapp.com',
+  projectId: 'tasker-5373a',
+  storageBucket: 'tasker-5373a.firebasestorage.app',
+  messagingSenderId: '78264698784',
+  appId: '1:78264698784:web:efe0a10363d95dec7b06c5',
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const userId = process.argv[2];
+if (!userId) {
+  console.error('Usage: node scripts/seed.mjs <USER_ID>');
+  console.error('Find your user ID in Firebase Console → Authentication → Users');
+  process.exit(1);
+}
+
+function daysFromNow(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d;
+}
+function hoursFromNow(h) {
+  return new Date(Date.now() + h * 60 * 60 * 1000);
+}
+
+const tasks = [
+  {
+    title: 'Quarterly Report Preparation',
+    description: 'Compile Q2 financials, KPIs, and team performance summary for stakeholder presentation.',
+    category: 'Work', startDate: new Date(), endDate: hoursFromNow(5),
+    allDay: false, reminder: '1hr', repeat: 'None', criticalLevel: 5, status: 'In Progress',
+    subtasks: [
+      { id: '1a', title: 'Collect revenue data from accounting', completed: true },
+      { id: '1b', title: 'Write executive summary', completed: false },
+      { id: '1c', title: 'Design presentation slides', completed: false },
+    ], attachments: [],
+  },
+  {
+    title: 'Morning Workout Routine',
+    description: '45-minute strength training session followed by 10 minutes stretching.',
+    category: 'Health', startDate: hoursFromNow(1), endDate: hoursFromNow(2),
+    allDay: false, reminder: '15min', repeat: 'Daily', criticalLevel: 2, status: 'Not Started',
+    subtasks: [
+      { id: '2a', title: 'Warm-up (10 min)', completed: false },
+      { id: '2b', title: 'Strength training (30 min)', completed: false },
+      { id: '2c', title: 'Cool-down stretch (5 min)', completed: false },
+    ], attachments: [],
+  },
+  {
+    title: 'Advanced TypeScript Module 4',
+    description: 'Complete Generics and Utility Types chapter, do exercises and quiz.',
+    category: 'Study', startDate: hoursFromNow(3), endDate: hoursFromNow(5),
+    allDay: false, reminder: '30min', repeat: 'Weekly', criticalLevel: 3, status: 'In Progress',
+    subtasks: [
+      { id: '3a', title: 'Watch lecture videos', completed: true },
+      { id: '3b', title: 'Complete exercises', completed: false },
+      { id: '3c', title: 'Take module quiz', completed: false },
+    ], attachments: [],
+  },
+  {
+    title: 'Pay Monthly Rent',
+    description: 'Transfer rent payment to landlord before end of month. Include utilities.',
+    category: 'Finance', startDate: daysFromNow(1), endDate: daysFromNow(2),
+    allDay: true, reminder: '1 day', repeat: 'Monthly', criticalLevel: 4, status: 'Not Started',
+    subtasks: [
+      { id: '4a', title: 'Check account balance', completed: false },
+      { id: '4b', title: 'Transfer to landlord', completed: false },
+    ], attachments: [],
+  },
+  {
+    title: 'Team Sprint Planning',
+    description: 'Review backlog, estimate tickets, and assign sprint tasks with the dev team.',
+    category: 'Work', startDate: daysFromNow(1), endDate: new Date(daysFromNow(1).getTime() + 2 * 60 * 60 * 1000),
+    allDay: false, reminder: '15min', repeat: 'Weekly', criticalLevel: 4, status: 'Not Started',
+    subtasks: [
+      { id: '5a', title: 'Prepare backlog items', completed: false },
+      { id: '5b', title: 'Send calendar invite', completed: true },
+    ], attachments: [],
+  },
+  {
+    title: 'Grocery & Meal Prep',
+    description: 'Buy weekly groceries and prep meals for Mon–Wed to save time during the week.',
+    category: 'Personal', startDate: daysFromNow(1), endDate: new Date(daysFromNow(1).getTime() + 3 * 60 * 60 * 1000),
+    allDay: false, reminder: '30min', repeat: 'Weekly', criticalLevel: 2, status: 'Not Started',
+    subtasks: [
+      { id: '6a', title: 'Write shopping list', completed: false },
+      { id: '6b', title: 'Visit supermarket', completed: false },
+      { id: '6c', title: 'Prep and portion meals', completed: false },
+    ], attachments: [],
+  },
+  {
+    title: 'Code Review — Auth Module',
+    description: 'Review 3 open PRs for the authentication refactor. Leave detailed comments.',
+    category: 'Work', startDate: daysFromNow(2), endDate: new Date(daysFromNow(2).getTime() + 90 * 60 * 1000),
+    allDay: false, reminder: '15min', repeat: 'None', criticalLevel: 4, status: 'Not Started',
+    subtasks: [
+      { id: '7a', title: 'Review PR #112 — OAuth flow', completed: false },
+      { id: '7b', title: 'Review PR #115 — JWT refresh', completed: false },
+      { id: '7c', title: 'Review PR #118 — Session expiry', completed: false },
+    ], attachments: [],
+  },
+  {
+    title: 'Daily Meditation',
+    description: '10-minute guided mindfulness session to start the day with clarity.',
+    category: 'Health', startDate: daysFromNow(2), endDate: new Date(daysFromNow(2).getTime() + 15 * 60 * 1000),
+    allDay: false, reminder: '15min', repeat: 'Daily', criticalLevel: 1, status: 'Not Started',
+    subtasks: [], attachments: [],
+  },
+  {
+    title: 'Monthly Budget Review',
+    description: 'Analyse spending vs budget, adjust savings targets, and update expense tracker.',
+    category: 'Finance', startDate: daysFromNow(3), endDate: daysFromNow(3),
+    allDay: true, reminder: '1 day', repeat: 'Monthly', criticalLevel: 3, status: 'Not Started',
+    subtasks: [
+      { id: '9a', title: 'Export bank statements', completed: false },
+      { id: '9b', title: 'Categorise expenses', completed: false },
+      { id: '9c', title: 'Update savings goal', completed: false },
+    ], attachments: [],
+  },
+  {
+    title: 'Client Demo Presentation',
+    description: 'Live product demo for new client. Prepare slides, test staging env, and rehearse.',
+    category: 'Work', startDate: daysFromNow(4), endDate: new Date(daysFromNow(4).getTime() + 60 * 60 * 1000),
+    allDay: false, reminder: '1hr', repeat: 'None', criticalLevel: 5, status: 'Not Started',
+    subtasks: [
+      { id: '10a', title: 'Finalize demo script', completed: false },
+      { id: '10b', title: 'Test staging environment', completed: false },
+      { id: '10c', title: 'Rehearse presentation', completed: false },
+      { id: '10d', title: 'Send Zoom link to client', completed: false },
+    ], attachments: [],
+  },
+  {
+    title: 'Set Up Project Repository',
+    description: 'Initialise Git repo, configure CI/CD pipeline, and push initial boilerplate.',
+    category: 'Work', startDate: daysFromNow(-3), endDate: daysFromNow(-3),
+    allDay: false, reminder: '15min', repeat: 'None', criticalLevel: 3, status: 'Completed',
+    subtasks: [
+      { id: 'c1a', title: 'Create GitHub repo', completed: true },
+      { id: 'c1b', title: 'Configure GitHub Actions', completed: true },
+      { id: 'c1c', title: 'Push initial commit', completed: true },
+    ], attachments: [],
+  },
+  {
+    title: 'Weekly Team Check-in',
+    description: 'Sync with team on blockers, wins, and goals for the upcoming week.',
+    category: 'Work', startDate: daysFromNow(-2), endDate: new Date(daysFromNow(-2).getTime() + 60 * 60 * 1000),
+    allDay: false, reminder: '15min', repeat: 'Weekly', criticalLevel: 2, status: 'Completed',
+    subtasks: [
+      { id: 'c2a', title: 'Prepare talking points', completed: true },
+      { id: 'c2b', title: 'Send meeting notes', completed: true },
+    ], attachments: [],
+  },
+  {
+    title: 'Annual Health Check-up',
+    description: 'Full body check-up including blood work, blood pressure, and eye exam.',
+    category: 'Health', startDate: daysFromNow(-1), endDate: new Date(daysFromNow(-1).getTime() + 2 * 60 * 60 * 1000),
+    allDay: false, reminder: '1hr', repeat: 'None', criticalLevel: 4, status: 'Completed',
+    subtasks: [
+      { id: 'c3a', title: 'Fast 8hrs before appointment', completed: true },
+      { id: 'c3b', title: 'Bring insurance card', completed: true },
+      { id: 'c3c', title: 'Collect test results', completed: true },
+    ], attachments: [],
+  },
+];
+
+async function seed() {
+  console.log(`Seeding ${tasks.length} tasks for user: ${userId}`);
+  const col = collection(db, 'users', userId, 'tasks');
+  let count = 0;
+  for (const t of tasks) {
+    await addDoc(col, {
+      ...t,
+      startDate: Timestamp.fromDate(new Date(t.startDate)),
+      endDate: Timestamp.fromDate(new Date(t.endDate)),
+      createdAt: Timestamp.now(),
+    });
+    count++;
+    console.log(`  ✓ ${count}/${tasks.length} — ${t.title}`);
+  }
+  console.log('\nDone! All tasks added to Firestore.');
+  process.exit(0);
+}
+
+seed().catch(err => {
+  console.error('Seed failed:', err.message);
+  process.exit(1);
+});

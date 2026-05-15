@@ -1,8 +1,55 @@
 import {
   doc, setDoc, getDoc, updateDoc,
-  collection, onSnapshot, Timestamp, increment,
+  collection, addDoc, onSnapshot, Timestamp, increment,
 } from 'firebase/firestore';
 import { db } from './config';
+
+// ── User Profile ───────────────────────────────────────────────────
+
+export async function createUserProfile(
+  userId: string,
+  data: { name: string; email: string }
+) {
+  await setDoc(doc(db, 'users', userId), {
+    name: data.name,
+    email: data.email,
+    createdAt: Timestamp.now(),
+  }, { merge: true });
+}
+
+export function subscribeProfile(
+  userId: string,
+  onChange: (profile: { name: string; email: string }) => void
+) {
+  const ref = doc(db, 'users', userId);
+  return onSnapshot(ref, snap => {
+    if (snap.exists()) {
+      onChange({ name: snap.data().name ?? '', email: snap.data().email ?? '' });
+    }
+  });
+}
+
+export async function updateUserProfile(
+  userId: string,
+  data: Partial<{ name: string; email: string }>
+) {
+  await updateDoc(doc(db, 'users', userId), data);
+}
+
+// ── Focus Sessions ─────────────────────────────────────────────────
+
+export async function saveFocusSession(
+  userId: string,
+  session: { type: string; duration: number; sound: string; startedAt: Date }
+) {
+  await addDoc(collection(db, 'users', userId, 'focusSessions'), {
+    type: session.type,
+    duration: session.duration,
+    sound: session.sound,
+    startedAt: Timestamp.fromDate(session.startedAt),
+    completedAt: Timestamp.now(),
+  });
+}
 
 // ── Moods ──────────────────────────────────────────────────────────
 

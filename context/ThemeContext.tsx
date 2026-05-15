@@ -25,9 +25,9 @@ const light: Theme = {
   border: '#E8E8E8',
   accent: '#000000',
   accentText: '#FFFFFF',
-  danger: '#EF4444',
-  success: '#22C55E',
-  warning: '#F59E0B',
+  danger: '#111111',
+  success: '#444444',
+  warning: '#777777',
   isDark: false,
 };
 
@@ -40,9 +40,9 @@ const dark: Theme = {
   border: '#2A2A2A',
   accent: '#FFFFFF',
   accentText: '#000000',
-  danger: '#EF4444',
-  success: '#22C55E',
-  warning: '#F59E0B',
+  danger: '#EEEEEE',
+  success: '#AAAAAA',
+  warning: '#888888',
   isDark: true,
 };
 

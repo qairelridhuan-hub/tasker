@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 export default function Signup() {
   const router = useRouter();
   const { signUp } = useAuth();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,6 +21,7 @@ export default function Signup() {
   const [error, setError] = useState('');
 
   function validate() {
+    if (!name.trim()) { setError('Please enter your name.'); return false; }
     if (!email.includes('@') || !email.includes('.')) { setError('Enter a valid email address.'); return false; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return false; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return false; }
@@ -31,7 +33,7 @@ export default function Signup() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await signUp(email.trim(), password);
+      await signUp(email.trim(), password, name.trim());
       router.replace('/(tabs)');
     } catch (e: any) {
       setError(e.message ?? 'Sign up failed. Try again.');
@@ -52,6 +54,20 @@ export default function Signup() {
           <Text style={styles.subtitle}>Start managing your tasks today</Text>
 
           <View style={styles.form}>
+            <View>
+              <Text style={styles.fieldLabel}>Full Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Your name"
+                placeholderTextColor="#aaa"
+                autoCapitalize="words"
+                autoCorrect={false}
+                textContentType="name"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+
             <View>
               <Text style={styles.fieldLabel}>Email</Text>
               <TextInput
@@ -149,7 +165,7 @@ const styles = StyleSheet.create({
   passWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e0e0e0', paddingHorizontal: 16, backgroundColor: '#fff', marginHorizontal: 1 },
   passInput: { flex: 1, fontSize: 15, color: '#000', paddingRight: 8 },
   eyeBtn: { paddingLeft: 8 },
-  error: { fontSize: 13, color: '#dc2626' },
+  error: { fontSize: 13, color: '#111111' },
   btn: { height: 54, borderRadius: 14, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   btnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
   terms: { fontSize: 12, color: '#aaa', textAlign: 'center', lineHeight: 18 },

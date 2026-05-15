@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   passWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e0e0e0', paddingHorizontal: 16, backgroundColor: '#fff', marginHorizontal: 1 },
   passInput: { flex: 1, fontSize: 15, color: '#000', paddingRight: 8 },
   eyeBtn: { paddingLeft: 8 },
-  error: { fontSize: 13, color: '#dc2626' },
+  error: { fontSize: 13, color: '#111111' },
   btn: { height: 54, borderRadius: 14, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   btnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
   forgotWrap: { alignItems: 'center' },

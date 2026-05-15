@@ -6,17 +6,17 @@ export const Colors = {
   ultraLight: '#F5F5F5',
   border: '#F0F0F0',
   divider: '#E0E0E0',
-  overdue: '#F44336',
+  overdue: '#111111',
   card: '#FFFFFF',
   bg: '#F8F8F8',
 };
 
 export const Critical = {
-  1: '#4CAF50',
-  2: '#2196F3',
-  3: '#FFC107',
-  4: '#FF9800',
-  5: '#F44336',
+  1: '#CCCCCC',
+  2: '#999999',
+  3: '#666666',
+  4: '#333333',
+  5: '#000000',
 } as Record<number, string>;
 
 export const CriticalNames = {

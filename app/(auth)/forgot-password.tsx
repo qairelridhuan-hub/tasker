@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   form: { gap: 16 },
   fieldLabel: { fontSize: 12, color: '#999', marginBottom: 6, fontWeight: '500' },
   input: { height: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e0e0e0', paddingHorizontal: 16, fontSize: 15, color: '#000', backgroundColor: '#fff' },
-  error: { fontSize: 13, color: '#dc2626' },
+  error: { fontSize: 13, color: '#111111' },
   btn: { height: 54, borderRadius: 14, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   btnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
   successWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingBottom: 60 },

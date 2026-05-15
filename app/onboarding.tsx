@@ -164,7 +164,7 @@ function AnimatedCalendar({ animKey }: { animKey: number }) {
     { top: 20, left: 10 }, { top: 20, left: 50 }, { top: 20, right: 10 },
     { top: 52, left: 30 }, { top: 52, right: 20 },
   ];
-  const colors = ['#F44336', '#FF9800', '#2196F3', '#4CAF50', '#FFC107'];
+  const colors = ['#000000', '#333333', '#666666', '#999999', '#CCCCCC'];
 
   return (
     <Animated.View style={{ transform: [{ translateY: slideY }], opacity }}>

@@ -158,5 +158,5 @@ const styles = StyleSheet.create({
   completeBtn: { flex: 1, backgroundColor: Colors.black, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   completeBtnText: { fontSize: 14, fontWeight: '600', color: Colors.white },
   deleteBtn: { flex: 1, backgroundColor: Colors.ultraLight, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  deleteBtnText: { fontSize: 14, fontWeight: '600', color: '#F44336' },
+  deleteBtnText: { fontSize: 14, fontWeight: '600', color: '#111111' },
 });

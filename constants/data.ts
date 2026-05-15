@@ -10,11 +10,11 @@ export const REMINDERS: ReminderOption[] = ['15min', '30min', '1hr', '1 day', 'C
 export const REPEATS: RepeatOption[] = ['None', 'Daily', 'Weekly', 'Monthly', 'Custom'];
 
 export const CRITICAL_LEVELS: { level: CriticalLevel; name: string; color: string }[] = [
-  { level: 1, name: 'Low', color: '#4CAF50' },
-  { level: 2, name: 'Moderate', color: '#2196F3' },
-  { level: 3, name: 'Important', color: '#FFC107' },
-  { level: 4, name: 'High', color: '#FF9800' },
-  { level: 5, name: 'Critical', color: '#F44336' },
+  { level: 1, name: 'Low',       color: '#CCCCCC' },
+  { level: 2, name: 'Moderate',  color: '#999999' },
+  { level: 3, name: 'Important', color: '#666666' },
+  { level: 4, name: 'High',      color: '#333333' },
+  { level: 5, name: 'Critical',  color: '#000000' },
 ];
 
 export const MOODS: Mood[] = [
