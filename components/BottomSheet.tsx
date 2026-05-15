@@ -14,9 +14,10 @@ interface Props {
   onClose: () => void;
   children: React.ReactNode;
   snapHeight?: number;
+  hideClose?: boolean;
 }
 
-export default function BottomSheet({ visible, onClose, children, snapHeight = SCREEN_H * 0.85 }: Props) {
+export default function BottomSheet({ visible, onClose, children, snapHeight = SCREEN_H * 0.85, hideClose = false }: Props) {
   const translateY = useRef(new Animated.Value(snapHeight)).current;
 
   useEffect(() => {
@@ -49,9 +50,11 @@ export default function BottomSheet({ visible, onClose, children, snapHeight = S
         pointerEvents="box-none"
       >
         <Animated.View style={[styles.sheet, { height: snapHeight, transform: [{ translateY }] }]}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
-            <X size={20} color={Colors.black} strokeWidth={2.5} />
-          </TouchableOpacity>
+          {!hideClose && (
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
+              <X size={20} color={Colors.black} strokeWidth={2.5} />
+            </TouchableOpacity>
+          )}
           {children}
         </Animated.View>
       </KeyboardAvoidingView>

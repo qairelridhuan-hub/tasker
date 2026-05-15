@@ -18,11 +18,11 @@ export const CRITICAL_LEVELS: { level: CriticalLevel; name: string; color: strin
 ];
 
 export const MOODS: Mood[] = [
-  { key: 'happy', emoji: '😊', label: 'Happy' },
-  { key: 'stressed', emoji: '😟', label: 'Stressed' },
-  { key: 'tired', emoji: '😴', label: 'Tired' },
-  { key: 'anxious', emoji: '😰', label: 'Anxious' },
-  { key: 'motivated', emoji: '💪', label: 'Motivated' },
+  { key: 'awful',     emoji: '😢', label: 'Awful' },
+  { key: 'sad',       emoji: '😕', label: 'Sad' },
+  { key: 'okay',      emoji: '😐', label: 'Okay' },
+  { key: 'good',      emoji: '🙂', label: 'Good' },
+  { key: 'great',     emoji: '😄', label: 'Great' },
 ];
 
 export const FOCUS_TYPES = ['Pomodoro', 'Deep Work', 'Custom'] as const;

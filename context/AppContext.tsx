@@ -6,8 +6,17 @@ import {
   updateTask as fbUpdateTask,
   deleteTask as fbDeleteTask,
 } from '../firebase/tasks';
+import {
+  subscribeMoods,
+  saveMood,
+  subscribeStats,
+  updateStreak,
+  addFocusMinutes,
+} from '../firebase/userData';
 import { useAuth } from './AuthContext';
-import { getMotivationalMessage, getAISuggestion, getTimeOfDay } from '../lib/ai';
+import { getMotivationalMessage, getAISuggestion, getMoodAdvice, getTimeOfDay } from '../lib/ai';
+import { nextRepeatDate, scheduleTaskReminder } from '../lib/notifications';
+import { MOODS } from '../constants/data';
 
 interface AppContextValue {
   tasks: Task[];
@@ -30,6 +39,9 @@ interface AppContextValue {
   aiSuggestion: string;
   aiLoading: boolean;
   refreshAI: () => void;
+  moodAdvice: string;
+  moodAdviceLoading: boolean;
+  moodHistory: Record<string, string>;
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
@@ -54,15 +66,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const userId = user?.uid ?? null;
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mood, setMood] = useState<Mood | null>(null);
+  const [mood, setMoodState] = useState<Mood | null>(null);
+
+  const setMood = useCallback((m: Mood | null) => {
+    setMoodState(m);
+    if (m && userId) {
+      const today = new Date().toISOString().split('T')[0];
+      saveMood(userId, today, m.key);
+    }
+  }, [userId]);
   const [stressLevel, setStressLevel] = useState(0.3);
   const [energyLevel, setEnergyLevel] = useState(0.6);
-  const [focusSession, setFocusSession] = useState<FocusSession | null>(null);
-  const [focusHours] = useState(2.5);
-  const [streak] = useState(7);
+  const [focusSession, setFocusSessionState] = useState<FocusSession | null>(null);
+  const [focusHours, setFocusHours] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [aiMessage, setAiMessage] = useState(FALLBACK_MESSAGES.default);
   const [aiSuggestion, setAiSuggestion] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [moodAdvice, setMoodAdvice] = useState('');
+  const [moodAdviceLoading, setMoodAdviceLoading] = useState(false);
+  const [moodHistory, setMoodHistory] = useState<Record<string, string>>({});
+
+  // Subscribe mood history from Firestore and restore today's mood
+  useEffect(() => {
+    if (!userId) { setMoodHistory({}); return; }
+    return subscribeMoods(userId, (history) => {
+      setMoodHistory(history);
+      const todayKey = new Date().toISOString().split('T')[0];
+      const todayMoodKey = history[todayKey];
+      if (todayMoodKey) {
+        const found = MOODS.find(m => m.key === todayMoodKey);
+        if (found) setMoodState(found);
+      }
+    });
+  }, [userId]);
+
+  // Subscribe streak + focusHours from Firestore
+  useEffect(() => {
+    if (!userId) return;
+    return subscribeStats(userId, ({ streak, focusHours }) => {
+      setStreak(streak);
+      setFocusHours(focusHours);
+    });
+  }, [userId]);
   const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -134,6 +180,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => { if (aiTimerRef.current) clearTimeout(aiTimerRef.current); };
   }, [mood, stressLevel, energyLevel, tasks.length]);
 
+  // Fetch mood-specific advice when mood changes
+  useEffect(() => {
+    if (!mood) { setMoodAdvice(''); return; }
+    setMoodAdviceLoading(true);
+    setMoodAdvice('');
+    const FALLBACKS: Record<string, string> = {
+      awful: "It's okay to have rough days. Take it one breath at a time.",
+      sad: "Give yourself grace today. Small steps still count.",
+      okay: "Steady is good. Keep going at your own pace.",
+      good: "Nice! Channel that good energy into your top task today.",
+      great: "You're on fire! Great time to tackle something big.",
+    };
+    getMoodAdvice(mood.label).then(advice => {
+      setMoodAdvice(advice || FALLBACKS[mood.key] || "You've got this.");
+      setMoodAdviceLoading(false);
+    });
+  }, [mood?.key]); // eslint-disable-line
+
   // Auto-refresh every 30 minutes
   useEffect(() => {
     const interval = setInterval(fetchAI, 30 * 60 * 1000);
@@ -154,7 +218,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const completeTask = useCallback(async (id: string) => {
     await fbUpdateTask(userId!, id, { status: 'Completed' });
-  }, []);
+    await updateStreak(userId!);
+
+    // If task repeats, create next occurrence automatically
+    const task = tasks.find(t => t.id === id);
+    if (task && task.repeat !== 'None' && task.repeat !== 'Custom') {
+      const nextStart = nextRepeatDate(new Date(task.startDate), task.repeat);
+      const nextEnd   = nextRepeatDate(new Date(task.endDate),   task.repeat);
+      if (nextStart && nextEnd) {
+        const { id: _id, createdAt: _c, ...rest } = task as any;
+        await fbAddTask(userId!, {
+          ...rest,
+          startDate: nextStart,
+          endDate:   nextEnd,
+          status:    'Not Started',
+        });
+        if (task.reminder !== 'Custom') {
+          scheduleTaskReminder({ id, title: task.title, startDate: nextStart, reminder: task.reminder }).catch(() => {});
+        }
+      }
+    }
+  }, [userId, tasks]);
+
+  const setFocusSession = useCallback((s: FocusSession | null) => {
+    setFocusSessionState(prev => {
+      if (prev && !s && prev.duration && userId) {
+        addFocusMinutes(userId, prev.duration);
+      }
+      return s;
+    });
+  }, [userId]);
 
   const toggleSubtask = useCallback(async (taskId: string, subtaskId: string) => {
     const task = tasks.find(t => t.id === taskId);
@@ -171,6 +264,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       mood, setMood, stressLevel, setStressLevel, energyLevel, setEnergyLevel,
       focusSession, setFocusSession, focusHours, streak,
       aiMessage, aiSuggestion, aiLoading, refreshAI: fetchAI,
+      moodAdvice, moodAdviceLoading, moodHistory,
       addTask, updateTask, deleteTask, completeTask, toggleSubtask,
     }}>
       {children}

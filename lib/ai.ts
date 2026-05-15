@@ -1,6 +1,6 @@
 const GROQ_KEY = process.env.EXPO_PUBLIC_GROQ_KEY ?? '';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL    = 'llama3-8b-8192';
+const MODEL    = 'llama-3.3-70b-versatile';
 
 async function chat(systemPrompt: string, userPrompt: string): Promise<string> {
   try {
@@ -81,6 +81,15 @@ Be direct and practical. No fluff. Adapt to the user's current state.`;
 
 Give your suggestion now.`;
 
+  return chat(system, user);
+}
+
+export async function getMoodAdvice(mood: string): Promise<string> {
+  const system = `You are a warm, emotionally intelligent life coach inside a productivity app.
+Give one short, caring piece of advice based on the user's current mood (max 2 sentences, under 140 chars).
+Be human, empathetic, and practical. No generic platitudes.`;
+
+  const user = `The user is feeling: ${mood}. Give your advice now.`;
   return chat(system, user);
 }
 

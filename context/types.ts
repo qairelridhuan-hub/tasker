@@ -28,7 +28,7 @@ export interface Task {
 }
 
 export interface Mood {
-  key: 'happy' | 'stressed' | 'tired' | 'anxious' | 'motivated';
+  key: 'awful' | 'sad' | 'okay' | 'good' | 'great';
   emoji: string;
   label: string;
 }

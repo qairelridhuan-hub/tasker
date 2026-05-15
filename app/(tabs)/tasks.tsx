@@ -75,6 +75,9 @@ export default function TasksScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Search Bar */}
       <View style={styles.searchRow}>
+        <TouchableOpacity style={styles.addBtn} onPress={() => setAddOpen(true)}>
+          <Plus size={20} color={Colors.white} strokeWidth={2.5} />
+        </TouchableOpacity>
         <View style={styles.searchBox}>
           <Search size={16} color={Colors.lightGray} />
           <TextInput
@@ -153,11 +156,6 @@ export default function TasksScreen() {
         />
       )}
 
-      {/* FAB */}
-      <TouchableOpacity style={[styles.fab, Shadow.card]} onPress={() => setAddOpen(true)}>
-        <Plus size={22} color={Colors.white} />
-      </TouchableOpacity>
-
       {/* Sheets */}
       <BottomSheet visible={addOpen} onClose={() => { setAddOpen(false); setPrefillDate(undefined); }} snapHeight={SH * 0.92}>
         <AddTaskSheet onClose={() => { setAddOpen(false); setPrefillDate(undefined); }} prefillDate={prefillDate} />
@@ -193,6 +191,7 @@ const styles = StyleSheet.create({
   searchRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center' },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.white, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, ...Shadow.chip },
   searchInput: { flex: 1, fontSize: 14, color: Colors.black },
+  addBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: Colors.black, alignItems: 'center', justifyContent: 'center', ...Shadow.chip },
   filterBtn: { backgroundColor: Colors.white, borderRadius: 12, padding: 10, ...Shadow.chip },
   filterBtnActive: { backgroundColor: Colors.black },
   tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 12 },

@@ -9,6 +9,7 @@ import { CATEGORIES, STATUSES, CRITICAL_LEVELS, REMINDERS, REPEATS } from '../..
 import { useApp } from '../../context/AppContext';
 import { Task, Category, TaskStatus, CriticalLevel, ReminderOption, RepeatOption } from '../../context/types';
 import { generateId } from '../../lib/helpers';
+import { scheduleTaskReminder } from '../../lib/notifications';
 
 interface Props {
   onClose: () => void;
@@ -37,11 +38,23 @@ export default function AddTaskSheet({ onClose, prefillDate }: Props) {
   const save = async () => {
     if (!title.trim() || saving) return;
     setSaving(true);
-    await addTask({
+    const taskData = {
       title: title.trim(), description, category,
       startDate, endDate, allDay, reminder, repeat,
       criticalLevel, status, subtasks, attachments: [],
-    });
+    };
+    await addTask(taskData);
+
+    // Schedule notification reminder (fire in background, don't block save)
+    if (reminder !== 'Custom') {
+      scheduleTaskReminder({
+        id: generateId(),
+        title: title.trim(),
+        startDate,
+        reminder,
+      }).catch(() => {});
+    }
+
     onClose();
   };
 

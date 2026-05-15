@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Dimensions,
+  StyleSheet, Dimensions, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import {
-  Plus, SmilePlus, Timer, BarChart2, ArrowRight, Flame,
-  Moon, Sun, LogOut, Menu,
+  Plus, SmilePlus, Timer, BarChart2, TrendingUp, ArrowRight, Flame,
+  Moon, Sun, LogOut, Menu, CalendarDays,
 } from 'lucide-react-native';
-import { Animated, useRef } from 'react';
+import { AwfulFace, SadFace, NeutralFace, GoodFace, GreatFace } from '../../components/MoodFaces';
 import { Shadow, Critical } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 import { getGreeting, formatDateLabel, timeRemaining } from '../../lib/helpers';
@@ -21,111 +22,188 @@ import MoodSheet from '../../components/sheets/MoodSheet';
 import FocusSheet from '../../components/sheets/FocusSheet';
 import StatsSheet from '../../components/sheets/StatsSheet';
 import TaskDetailSheet from '../../components/sheets/TaskDetailSheet';
+import ChatSheet from '../../components/sheets/ChatSheet';
+import MoodCalendarSheet from '../../components/sheets/MoodCalendarSheet';
 import { Task } from '../../context/types';
 
 const { height: SH } = Dimensions.get('window');
 
 const ACTIONS = [
-  { key: 'add',   label: 'Add Task',  Icon: Plus,      size: 15 },
-  { key: 'mood',  label: 'Check In',  Icon: SmilePlus, size: 15 },
-  { key: 'focus', label: 'Focus',     Icon: Timer,     size: 15 },
-  { key: 'stats', label: 'Stats',     Icon: BarChart2, size: 15 },
+  { key: 'add',       label: 'Add Task',   Icon: Plus,        size: 16 },
+  { key: 'mood',      label: 'Check In',   Icon: SmilePlus,   size: 16 },
+  { key: 'focus',     label: 'Focus',      Icon: Timer,       size: 16 },
+  { key: 'stats',     label: 'Stats',      Icon: BarChart2,   size: 16 },
+  { key: 'analytics', label: 'Analytics',  Icon: TrendingUp,  size: 16 },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme, isDark, toggleTheme } = useTheme();
   const { logOut } = useAuth();
-  const { mood, todayTasks, completedToday, overdueTasks, upcomingDeadlines, aiMessage, aiSuggestion, aiLoading, refreshAI, streak } = useApp();
+  const { todayTasks, completedToday, overdueTasks, streak, mood, moodAdvice, moodAdviceLoading, refreshAI } = useApp();
+
+  useFocusEffect(useCallback(() => {
+    refreshAI();
+    return () => {
+      // Collapse FAB and pill when leaving the tab
+      toggle(false);
+      togglePill(false);
+    };
+  }, [refreshAI]));
 
   const [addOpen, setAddOpen]     = useState(false);
   const [moodOpen, setMoodOpen]   = useState(false);
   const [focusOpen, setFocusOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [chatOpen, setChatOpen]         = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
+  const [expanded, setExpanded]   = useState(false);
   const [pillOpen, setPillOpen]   = useState(false);
-  const pillWidth = useRef(new Animated.Value(0)).current;
+
+  const pillWidth   = useRef(new Animated.Value(0)).current;
   const pillOpacity = useRef(new Animated.Value(0)).current;
+  const rotate      = useRef(new Animated.Value(0)).current;
+  const itemAnims   = useRef(ACTIONS.map(() => ({
+    translateX: new Animated.Value(-10),
+    opacity:    new Animated.Value(0),
+    scale:      new Animated.Value(0.7),
+  }))).current;
 
   const togglePill = (open: boolean) => {
     setPillOpen(open);
     Animated.parallel([
-      Animated.spring(pillWidth, { toValue: open ? 1 : 0, useNativeDriver: false, damping: 18, stiffness: 200 } as any),
+      Animated.spring(pillWidth,   { toValue: open ? 1 : 0, useNativeDriver: false, damping: 18, stiffness: 200 } as any),
       Animated.timing(pillOpacity, { toValue: open ? 1 : 0, duration: open ? 200 : 120, useNativeDriver: false }),
     ]).start();
   };
 
-  const handleAction = (key: string) => {
-    if (key === 'add')   setAddOpen(true);
-    if (key === 'mood')  setMoodOpen(true);
-    if (key === 'focus') setFocusOpen(true);
-    if (key === 'stats') setStatsOpen(true);
+  const toggle = (open: boolean) => {
+    setExpanded(open);
+    Animated.parallel([
+      Animated.spring(rotate, { toValue: open ? 1 : 0, useNativeDriver: true, damping: 15, stiffness: 200 }),
+      ...itemAnims.map((a, i) =>
+        Animated.parallel([
+          Animated.spring(a.translateX, { toValue: open ? 0 : -10, useNativeDriver: true, damping: 14, stiffness: 180 } as any),
+          Animated.timing(a.opacity,    { toValue: open ? 1 : 0, duration: open ? 160 : 100, delay: open ? i * 45 : (ACTIONS.length - 1 - i) * 25, useNativeDriver: true }),
+          Animated.spring(a.scale,      { toValue: open ? 1 : 0.7, useNativeDriver: true, damping: 14, stiffness: 200, delay: open ? i * 45 : 0 } as any),
+        ])
+      ),
+    ]).start();
   };
 
+  const handleAction = (key: string) => {
+    if (key === 'add')       setAddOpen(true);
+    if (key === 'mood')      setMoodOpen(true);
+    if (key === 'focus')     setFocusOpen(true);
+    if (key === 'stats')     setStatsOpen(true);
+    if (key === 'analytics') router.push('/(tabs)/analytics');
+    toggle(false);
+  };
+
+  const MOOD_ICONS: Record<string, React.ComponentType<any>> = {
+    awful: AwfulFace, sad: SadFace, okay: NeutralFace, good: GoodFace, great: GreatFace,
+  };
+
+  const rotateInterp = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
   const remaining = todayTasks.length - completedToday;
   const pct = todayTasks.length > 0 ? completedToday / todayTasks.length : 0;
-
+  const now = new Date();
   const s = makeStyles(theme);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
+
+      {/* ── Header ── */}
+      <View style={s.header}>
+          <Text style={s.greeting}>{getGreeting()}, Qairel</Text>
+          <Text style={s.date}>{formatDateLabel(new Date())}</Text>
+
+          {/* FAB row — directly below date */}
+          <View style={s.fabContainer}>
+            <TouchableOpacity style={s.mainFab} onPress={() => toggle(!expanded)} activeOpacity={0.85}>
+              <Animated.View style={{ transform: [{ rotate: rotateInterp }] }}>
+                <Plus size={20} color="#fff" strokeWidth={2.5} />
+              </Animated.View>
+            </TouchableOpacity>
+            {ACTIONS.map((action, i) => {
+              const anim = itemAnims[i];
+              const IconComp = action.Icon;
+              return (
+                <View key={action.key} pointerEvents={expanded ? 'auto' : 'none'}>
+                  <Animated.View style={{ opacity: anim.opacity, transform: [{ translateX: anim.translateX }, { scale: anim.scale }] }}>
+                    <TouchableOpacity style={[s.subBtnInner, Shadow.chip]} onPress={() => handleAction(action.key)} activeOpacity={0.75}>
+                      <IconComp size={22} color={theme.text} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </Animated.View>
+                </View>
+              );
+            })}
+          </View>
+        <View style={s.iconPill}>
+          <Animated.View style={{
+            flexDirection: 'row', alignItems: 'center',
+            opacity: pillOpacity,
+            maxWidth: pillWidth.interpolate({ inputRange: [0, 1], outputRange: [0, 160] }),
+            overflow: 'hidden',
+          }}>
+            <TouchableOpacity style={s.iconPillBtn} onPress={toggleTheme}>
+              {isDark ? <Moon size={18} color={theme.text} /> : <Sun size={18} color={theme.text} />}
+            </TouchableOpacity>
+            <View style={s.iconPillDivider} />
+            <TouchableOpacity style={s.iconPillBtn} onPress={logOut}>
+              <LogOut size={18} color={theme.text} />
+            </TouchableOpacity>
+            <View style={s.iconPillDivider} />
+          </Animated.View>
+          <TouchableOpacity style={s.iconPillBtn} onPress={() => togglePill(!pillOpen)}>
+            <Menu size={18} color={theme.text} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Mood pill ── */}
+      {mood && (
+        <TouchableOpacity style={[s.moodPill, Shadow.chip]} onPress={() => setChatOpen(true)} activeOpacity={0.8}>
+          <View style={s.moodPillIcon}>
+            {(() => { const Face = MOOD_ICONS[mood.key] ?? NeutralFace; return <Face size={20} color={theme.text} />; })()}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.moodPillTitle}>Feeling {mood.label}</Text>
+            {moodAdviceLoading
+              ? <Text style={s.moodPillSub}>Getting advice...</Text>
+              : moodAdvice
+              ? <Text style={s.moodPillSub} numberOfLines={1}>{moodAdvice}</Text>
+              : null}
+          </View>
+          <TouchableOpacity style={s.moodPillCalendar} onPress={() => setCalendarOpen(true)} activeOpacity={0.7}>
+            <CalendarDays size={14} color="#fff" strokeWidth={2} />
+          </TouchableOpacity>
+          <View style={s.moodPillArrow}>
+            <ArrowRight size={13} color="#fff" strokeWidth={2.5} />
+          </View>
+        </TouchableOpacity>
+      )}
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
 
-        {/* ── Header ── */}
-        <View style={s.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.greeting}>{getGreeting()}, Qairel</Text>
-            <Text style={s.date}>{formatDateLabel(new Date())}</Text>
-          </View>
-          <View style={s.iconPill}>
-            <Animated.View style={{
-              flexDirection: 'row', alignItems: 'center',
-              opacity: pillOpacity,
-              maxWidth: pillWidth.interpolate({ inputRange: [0, 1], outputRange: [0, 160] }),
-              overflow: 'hidden',
-            }}>
-              <TouchableOpacity style={s.iconPillBtn} onPress={toggleTheme}>
-                {isDark ? <Moon size={18} color={theme.text} /> : <Sun size={18} color={theme.text} />}
-              </TouchableOpacity>
-              <View style={s.iconPillDivider} />
-              <TouchableOpacity style={s.iconPillBtn} onPress={logOut}>
-                <LogOut size={18} color={theme.text} />
-              </TouchableOpacity>
-              <View style={s.iconPillDivider} />
-            </Animated.View>
-            <TouchableOpacity style={s.iconPillBtn} onPress={() => togglePill(!pillOpen)}>
-              <Menu size={18} color={theme.text} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ── Quick Actions ── */}
-        <View style={s.actionsRow}>
-          {ACTIONS.map(({ key, label, Icon, size }) => (
-            <TouchableOpacity
-              key={key}
-              style={[s.actionChip, Shadow.chip]}
-              onPress={() => handleAction(key)}
-              activeOpacity={0.75}
-            >
-              <View style={s.actionIcon}>
-                <Icon size={size} color={theme.accent} strokeWidth={2} />
-              </View>
-              <Text style={s.actionLabel}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* ── Progress Card ── */}
+        {/* ── Today's Overview ── */}
         <View style={[s.card, Shadow.card]}>
+          {/* Header */}
           <View style={s.cardHeader}>
-            <Text style={s.cardLabel}>TODAY</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/tasks')} style={s.linkRow}>
-              <Text style={s.linkText}>All tasks</Text>
-              <ArrowRight size={12} color={theme.textMuted} strokeWidth={2} />
+            <View>
+              <Text style={s.cardLabel}>TODAY'S OVERVIEW</Text>
+              <Text style={s.cardSubLabel}>
+                {todayTasks.length === 0 ? 'No tasks scheduled' : `${todayTasks.length} task${todayTasks.length !== 1 ? 's' : ''} today`}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/tasks')} style={s.jumpBtn}>
+              <Text style={s.jumpBtnText}>Tasks</Text>
+              <ArrowRight size={12} color="#fff" strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
 
+          {/* Stats row */}
           <View style={s.statsInline}>
             <View style={s.statItem}>
               <Text style={s.statNum}>{completedToday}</Text>
@@ -138,7 +216,9 @@ export default function HomeScreen() {
             </View>
             <View style={s.statDivider} />
             <View style={s.statItem}>
-              <Text style={[s.statNum, overdueTasks.length > 0 && { color: theme.danger }]}>{overdueTasks.length}</Text>
+              <Text style={[s.statNum, overdueTasks.length > 0 && { color: theme.danger }]}>
+                {overdueTasks.length}
+              </Text>
               <Text style={s.statLbl}>Overdue</Text>
             </View>
             <View style={s.statDivider} />
@@ -151,6 +231,7 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* Progress bar */}
           <View style={s.progressBg}>
             <View style={[s.progressFill, { width: `${pct * 100}%` }]} />
           </View>
@@ -160,64 +241,84 @@ export default function HomeScreen() {
               {todayTasks.length === 0 ? 'No tasks scheduled' : `${completedToday} of ${todayTasks.length} complete`}
             </Text>
           </View>
-        </View>
 
-        {/* ── AI Insight ── */}
-        <View style={[s.insightCard, Shadow.card]}>
-          <View style={s.insightHeader}>
-            <Text style={s.insightLabel}>AI INSIGHT</Text>
-            <TouchableOpacity onPress={refreshAI} disabled={aiLoading}>
-              <Text style={[s.refreshBtn, aiLoading && { opacity: 0.4 }]}>↻</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={s.aiMsgText} numberOfLines={2}>{aiMessage}</Text>
-          {aiSuggestion ? (
-            <Text style={s.insightText}>{aiSuggestion}</Text>
-          ) : aiLoading ? (
-            <Text style={s.insightText}>Thinking...</Text>
-          ) : null}
-          {overdueTasks.length > 0 && (
-            <TouchableOpacity onPress={() => router.push('/(tabs)/tasks')} style={s.insightBtn}>
-              <Text style={s.insightBtnText}>View overdue</Text>
-              <ArrowRight size={11} color={theme.danger} strokeWidth={2.5} />
-            </TouchableOpacity>
-          )}
-        </View>
+          {/* Due in 24h */}
+          {(() => {
+            const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            const dueSoon = todayTasks.filter(t =>
+              new Date(t.endDate) > now &&
+              new Date(t.endDate) <= in24h &&
+              t.status !== 'Completed' && t.status !== 'Cancelled'
+            ).sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
 
-        {/* ── Upcoming ── */}
-        {upcomingDeadlines.length > 0 && (
-          <View>
-            <Text style={s.sectionLabel}>UPCOMING</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={s.chipRow}>
-                {upcomingDeadlines.map(task => (
+            if (dueSoon.length === 0) return null;
+            return (
+              <View style={s.due24Wrap}>
+                <Text style={s.due24Label}>DUE IN 24H</Text>
+                {dueSoon.map(task => (
                   <TouchableOpacity
                     key={task.id}
-                    style={[s.chip, Shadow.chip, { borderLeftColor: Critical[task.criticalLevel] }]}
+                    style={s.due24Row}
                     onPress={() => setDetailTask(task)}
+                    activeOpacity={0.7}
                   >
-                    <Text style={s.chipTitle} numberOfLines={1}>{task.title}</Text>
-                    <Text style={s.chipTime}>{timeRemaining(new Date(task.endDate))}</Text>
+                    <View style={[s.due24Dot, { backgroundColor: Critical[task.criticalLevel] }]} />
+                    <Text style={s.due24Title} numberOfLines={1}>{task.title}</Text>
+                    <Text style={s.due24Time}>{timeRemaining(new Date(task.endDate))}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            </ScrollView>
-          </View>
-        )}
+            );
+          })()}
+
+          {/* Overdue list */}
+          {overdueTasks.length > 0 && (
+            <View style={s.due24Wrap}>
+              <Text style={[s.due24Label, { color: theme.danger }]}>OVERDUE</Text>
+              {overdueTasks.slice(0, 3).map(task => (
+                <TouchableOpacity
+                  key={task.id}
+                  style={s.due24Row}
+                  onPress={() => setDetailTask(task)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[s.due24Dot, { backgroundColor: theme.danger }]} />
+                  <Text style={s.due24Title} numberOfLines={1}>{task.title}</Text>
+                  <Text style={[s.due24Time, { color: theme.danger }]}>{timeRemaining(new Date(task.endDate))}</Text>
+                </TouchableOpacity>
+              ))}
+              {overdueTasks.length > 3 && (
+                <TouchableOpacity onPress={() => router.push('/(tabs)/tasks')} activeOpacity={0.7}>
+                  <Text style={[s.due24Time, { color: theme.danger, marginTop: 4 }]}>
+                    +{overdueTasks.length - 3} more overdue
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
 
       </ScrollView>
+
+
 
       <BottomSheet visible={addOpen} onClose={() => setAddOpen(false)} snapHeight={SH * 0.92}>
         <AddTaskSheet onClose={() => setAddOpen(false)} />
       </BottomSheet>
-      <BottomSheet visible={moodOpen} onClose={() => setMoodOpen(false)} snapHeight={SH * 0.72}>
-        <MoodSheet onClose={() => setMoodOpen(false)} />
+      <BottomSheet visible={moodOpen} onClose={() => setMoodOpen(false)} snapHeight={SH * 0.62} hideClose>
+        <MoodSheet onClose={() => setMoodOpen(false)} onOpenCalendar={() => { setMoodOpen(false); setCalendarOpen(true); }} />
       </BottomSheet>
       <BottomSheet visible={focusOpen} onClose={() => setFocusOpen(false)} snapHeight={SH * 0.65}>
         <FocusSheet onClose={() => setFocusOpen(false)} />
       </BottomSheet>
       <BottomSheet visible={statsOpen} onClose={() => setStatsOpen(false)} snapHeight={SH * 0.6}>
         <StatsSheet onClose={() => setStatsOpen(false)} />
+      </BottomSheet>
+      <BottomSheet visible={chatOpen} onClose={() => setChatOpen(false)} snapHeight={SH * 0.88}>
+        <ChatSheet onClose={() => setChatOpen(false)} />
+      </BottomSheet>
+      <BottomSheet visible={calendarOpen} onClose={() => setCalendarOpen(false)} snapHeight={SH * 0.72}>
+        <MoodCalendarSheet onClose={() => setCalendarOpen(false)} />
       </BottomSheet>
       <BottomSheet visible={!!detailTask} onClose={() => setDetailTask(null)} snapHeight={SH * 0.85}>
         {detailTask && <TaskDetailSheet task={detailTask} onClose={() => setDetailTask(null)} />}
@@ -228,13 +329,18 @@ export default function HomeScreen() {
 
 function makeStyles(theme: ReturnType<typeof useTheme>['theme']) {
   return StyleSheet.create({
-    safe: { flex: 1, backgroundColor: theme.bg },
-    content: { paddingHorizontal: 20, paddingBottom: 120 },
+    safe:    { flex: 1, backgroundColor: theme.bg },
+    content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 120 },
 
-    header: { flexDirection: 'row', alignItems: 'center', paddingTop: 12, paddingBottom: 16 },
-    greeting: { fontSize: 24, fontWeight: '800', color: theme.text, letterSpacing: -0.5 },
-    date: { fontSize: 13, color: theme.textMuted, marginTop: 2 },
+    header: {
+      paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4,
+      paddingRight: 64, // reserve space for the collapsed pill
+    },
+    greeting: { fontSize: 18, fontWeight: '700', color: theme.text, letterSpacing: -0.3 },
+    date:     { fontSize: 12, color: theme.textMuted, marginTop: 2 },
+
     iconPill: {
+      position: 'absolute', top: 12, right: 20,
       flexDirection: 'row', alignItems: 'center',
       backgroundColor: theme.surface, borderRadius: 999,
       borderWidth: 1, borderColor: theme.border,
@@ -242,53 +348,88 @@ function makeStyles(theme: ReturnType<typeof useTheme>['theme']) {
       shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12,
       shadowOffset: { width: 0, height: 4 }, elevation: 4,
     },
-    iconPillBtn: { paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
+    iconPillBtn:     { paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
     iconPillDivider: { width: 1, height: 16, backgroundColor: theme.border },
 
-    actionsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-    actionChip: {
-      flex: 1, alignItems: 'center', gap: 6,
-      backgroundColor: theme.surface, borderRadius: 16,
-      paddingVertical: 12, paddingHorizontal: 4,
+    /* FAB */
+    fabContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 12,
     },
-    actionIcon: {
-      width: 34, height: 34, borderRadius: 10,
+    mainFab: {
+      width: 46, height: 46, borderRadius: 23,
+      backgroundColor: '#000',
+      alignItems: 'center', justifyContent: 'center',
+      shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 }, elevation: 8,
+    },
+    subBtnInner: {
+      width: 46, height: 46, borderRadius: 23,
+      backgroundColor: theme.surface,
+      alignItems: 'center', justifyContent: 'center',
+      borderWidth: 1, borderColor: theme.border,
+    },
+
+    card:       { backgroundColor: theme.surface, borderRadius: 20, padding: 18, marginBottom: 12 },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    cardLabel:  { fontSize: 11, color: theme.textMuted, letterSpacing: 0.8, fontWeight: '600' },
+    linkRow:    { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    linkText:   { fontSize: 12, color: theme.textMuted },
+
+    statsInline: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+    statItem:    { flex: 1, alignItems: 'center' },
+    statNum:     { fontSize: 22, fontWeight: '700', color: theme.text },
+    statLbl:     { fontSize: 10, color: theme.textMuted, marginTop: 2, fontWeight: '500' },
+    statDivider: { width: 1, height: 28, backgroundColor: theme.border },
+
+    progressBg:   { height: 4, backgroundColor: theme.border, borderRadius: 2, marginBottom: 8 },
+    progressFill: { height: 4, backgroundColor: theme.accent, borderRadius: 2 },
+    progressMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    progressPct:  { fontSize: 13, fontWeight: '700', color: theme.text },
+    progressSub:  { fontSize: 12, color: theme.textMuted },
+
+    insightCard:   { backgroundColor: theme.surface, borderRadius: 20, padding: 18, marginBottom: 20 },
+    insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    insightLabel:  { fontSize: 11, color: theme.textMuted, letterSpacing: 0.8, fontWeight: '600' },
+    refreshBtn:    { fontSize: 18, color: theme.textMuted },
+    aiMsgText:     { fontSize: 14, fontWeight: '700', color: theme.text, lineHeight: 20, marginBottom: 6 },
+    insightText:   { fontSize: 13, color: theme.textMuted, lineHeight: 19 },
+    insightBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
+    insightBtnText:{ fontSize: 12, color: theme.danger, fontWeight: '600' },
+
+    moodPill: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      backgroundColor: theme.surface, borderRadius: 16,
+      paddingHorizontal: 14, paddingVertical: 10,
+      marginHorizontal: 20, marginTop: 16, marginBottom: 12,
+    },
+    moodPillIcon: {
+      width: 32, height: 32, borderRadius: 16,
       backgroundColor: `${theme.accent}15`,
       alignItems: 'center', justifyContent: 'center',
     },
-    actionLabel: { fontSize: 10, fontWeight: '600', color: theme.text },
-
-    card: { backgroundColor: theme.surface, borderRadius: 20, padding: 18, marginBottom: 12 },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    cardLabel: { fontSize: 11, color: theme.textMuted, letterSpacing: 0.8, fontWeight: '600' },
-    linkRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-    linkText: { fontSize: 12, color: theme.textMuted },
-
-    statsInline: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
-    statItem: { flex: 1, alignItems: 'center' },
-    statNum: { fontSize: 22, fontWeight: '700', color: theme.text },
-    statLbl: { fontSize: 10, color: theme.textMuted, marginTop: 2, fontWeight: '500' },
-    statDivider: { width: 1, height: 28, backgroundColor: theme.border },
-
-    progressBg: { height: 4, backgroundColor: theme.border, borderRadius: 2, marginBottom: 8 },
-    progressFill: { height: 4, backgroundColor: theme.accent, borderRadius: 2 },
-    progressMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    progressPct: { fontSize: 13, fontWeight: '700', color: theme.text },
-    progressSub: { fontSize: 12, color: theme.textMuted },
-
-    insightCard: { backgroundColor: theme.surface, borderRadius: 20, padding: 18, marginBottom: 20 },
-    insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-    insightLabel: { fontSize: 11, color: theme.textMuted, letterSpacing: 0.8, fontWeight: '600' },
-    refreshBtn: { fontSize: 18, color: theme.textMuted },
-    aiMsgText: { fontSize: 14, fontWeight: '700', color: theme.text, lineHeight: 20, marginBottom: 6 },
-    insightText: { fontSize: 13, color: theme.textMuted, lineHeight: 19 },
-    insightBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
-    insightBtnText: { fontSize: 12, color: theme.danger, fontWeight: '600' },
+    moodPillTitle: { fontSize: 13, fontWeight: '700', color: theme.text },
+    moodPillSub:   { fontSize: 11, color: theme.textMuted, marginTop: 1 },
+    moodPillCalendar: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center' },
+    moodPillArrow: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center' },
 
     sectionLabel: { fontSize: 11, color: theme.textMuted, letterSpacing: 0.8, fontWeight: '600', marginBottom: 10 },
-    chipRow: { flexDirection: 'row', gap: 10, paddingBottom: 4 },
-    chip: { backgroundColor: theme.surface, borderRadius: 14, padding: 14, minWidth: 150, borderLeftWidth: 3 },
-    chipTitle: { fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 4 },
-    chipTime: { fontSize: 11, color: theme.textMuted },
+    chipRow:      { flexDirection: 'row', gap: 10, paddingBottom: 4 },
+    chip:         { backgroundColor: theme.surface, borderRadius: 14, padding: 14, minWidth: 150, borderLeftWidth: 3 },
+    chipTitle:    { fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 4 },
+    chipTime:     { fontSize: 11, color: theme.textMuted },
+
+    cardSubLabel: { fontSize: 12, color: theme.textMuted, marginTop: 2 },
+    jumpBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#111', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+    jumpBtnText:  { fontSize: 12, fontWeight: '600', color: '#fff' },
+
+    due24Wrap:  { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: theme.border, gap: 8 },
+    due24Label: { fontSize: 10, fontWeight: '700', color: theme.textMuted, letterSpacing: 0.8, marginBottom: 2 },
+    due24Row:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    due24Dot:   { width: 7, height: 7, borderRadius: 4 },
+    due24Title: { flex: 1, fontSize: 13, fontWeight: '500', color: theme.text },
+    due24Time:  { fontSize: 11, color: theme.textMuted },
   });
 }

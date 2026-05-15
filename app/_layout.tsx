@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, LogBox } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { requestNotificationPermission } from '../lib/notifications';
 
 LogBox.ignoreLogs([
   'Firestore',
@@ -17,6 +18,7 @@ import { AppProvider } from '../context/AppContext';
 import { ThemeProvider } from '../context/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
+requestNotificationPermission();
 
 function RootNavigator() {
   const { user, loading } = useAuth();
@@ -46,7 +48,7 @@ function RootNavigator() {
       <Stack.Screen name="index" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(auth)" options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(tabs)" options={{ animation: 'slide_from_bottom' }} />
     </Stack>
   );
 }

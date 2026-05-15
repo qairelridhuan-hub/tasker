@@ -399,11 +399,27 @@ export default function Onboarding() {
   const taglineO    = useRef(new Animated.Value(0)).current;
   const btnO        = useRef(new Animated.Value(0)).current;
   const btnY        = useRef(new Animated.Value(20)).current;
+  const exitScale   = useRef(new Animated.Value(1)).current;
+  const exitO       = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (loading) return;
-    setPhase(user ? 'splash' : 'slides');
-  }, [loading, user]);
+    setPhase('slides');
+  }, [loading]);
+
+  const goToDashboard = () => {
+    Animated.parallel([
+      Animated.timing(exitScale, { toValue: 1.08, duration: 320, useNativeDriver: true }),
+      Animated.timing(exitO,     { toValue: 0,    duration: 280, useNativeDriver: true }),
+    ]).start(() => router.replace('/(tabs)'));
+  };
+
+  const goToSignup = () => {
+    Animated.parallel([
+      Animated.timing(exitScale, { toValue: 1.08, duration: 320, useNativeDriver: true }),
+      Animated.timing(exitO,     { toValue: 0,    duration: 280, useNativeDriver: true }),
+    ]).start(() => router.replace('/(auth)/signup'));
+  };
 
   function resetEntry() {
     tagY.setValue(-16); tagO.setValue(0);
@@ -594,6 +610,7 @@ export default function Onboarding() {
   // ── Splash phase ──────────────────────────────────────────────────
   return (
     <Animated.View style={[styles.splash, { opacity: splashO }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.splash, { opacity: exitO, transform: [{ scale: exitScale }] }]}>
       <StatusBar style="dark" />
 
       {!user && (
@@ -636,12 +653,12 @@ export default function Onboarding() {
       {/* Buttons */}
       <Animated.View style={{ opacity: btnO, transform: [{ translateY: btnY }], width: '100%', alignItems: 'center', gap: 16, marginTop: 8 }}>
         {user ? (
-          <TouchableOpacity style={styles.signUpBtn} onPress={() => router.replace('/(tabs)')} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.signUpBtn} onPress={goToDashboard} activeOpacity={0.85}>
             <Text style={styles.signUpText}>Get Started</Text>
           </TouchableOpacity>
         ) : (
           <>
-            <TouchableOpacity style={styles.signUpBtn} onPress={() => router.replace('/(auth)/signup')} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.signUpBtn} onPress={goToSignup} activeOpacity={0.85}>
               <Text style={styles.signUpText}>Get Started</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.replace('/(auth)/login')} activeOpacity={0.7}>
@@ -649,6 +666,7 @@ export default function Onboarding() {
             </TouchableOpacity>
           </>
         )}
+      </Animated.View>
       </Animated.View>
     </Animated.View>
   );
