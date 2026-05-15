@@ -3,6 +3,7 @@ import {
   collection, addDoc, onSnapshot, Timestamp, increment,
 } from 'firebase/firestore';
 import { db } from './config';
+import { localDateKey } from '../lib/helpers';
 
 // ── User Profile ───────────────────────────────────────────────────
 
@@ -94,7 +95,7 @@ export function subscribeStats(
 export async function updateStreak(userId: string) {
   const ref = doc(db, 'users', userId, 'stats', 'main');
   const snap = await getDoc(ref);
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateKey();
 
   if (!snap.exists()) {
     await setDoc(ref, { streak: 1, lastActiveDate: today, focusHours: 0 });
@@ -102,11 +103,11 @@ export async function updateStreak(userId: string) {
   }
 
   const { lastActiveDate, streak } = snap.data();
-  if (lastActiveDate === today) return; // already counted today
+  if (lastActiveDate === today) return;
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterdayStr = localDateKey(yesterday);
 
   const newStreak = lastActiveDate === yesterdayStr ? (streak ?? 0) + 1 : 1;
   await updateDoc(ref, { streak: newStreak, lastActiveDate: today });

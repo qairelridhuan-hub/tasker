@@ -18,6 +18,7 @@ import {
 import { useAuth } from './AuthContext';
 import { getMotivationalMessage, getAISuggestion, getMoodAdvice, getTimeOfDay } from '../lib/ai';
 import { nextRepeatDate, scheduleTaskReminder } from '../lib/notifications';
+import { localDateKey } from '../lib/helpers';
 import { MOODS } from '../constants/data';
 import { seedTasks } from '../lib/seedTasks';
 
@@ -75,8 +76,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setMood = useCallback((m: Mood | null) => {
     setMoodState(m);
     if (m && userId) {
-      const today = new Date().toISOString().split('T')[0];
-      saveMood(userId, today, m.key);
+      saveMood(userId, localDateKey(), m.key);
     }
   }, [userId]);
   const [stressLevel, setStressLevel] = useState(0.3);
@@ -100,16 +100,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [userId]);
 
-  // Subscribe mood history from Firestore and restore today's mood
+  // Subscribe mood history from Firestore — restore today's mood or clear if new day
   useEffect(() => {
-    if (!userId) { setMoodHistory({}); return; }
+    if (!userId) { setMoodHistory({}); setMoodState(null); return; }
     return subscribeMoods(userId, (history) => {
       setMoodHistory(history);
-      const todayKey = new Date().toISOString().split('T')[0];
+      const todayKey = localDateKey();
       const todayMoodKey = history[todayKey];
       if (todayMoodKey) {
         const found = MOODS.find(m => m.key === todayMoodKey);
         if (found) setMoodState(found);
+      } else {
+        setMoodState(null); // new day — require fresh check-in
       }
     });
   }, [userId]);

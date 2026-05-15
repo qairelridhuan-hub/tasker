@@ -8,12 +8,11 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Plus, SmilePlus, Timer, BarChart2, TrendingUp, ArrowRight, Flame,
-  Moon, Sun, LogOut, Menu, CalendarDays,
+  Moon, Sun, LogOut, Menu, CalendarDays, Smile,
 } from 'lucide-react-native';
-import { AwfulFace, SadFace, NeutralFace, GoodFace, GreatFace } from '../../components/MoodFaces';
 import { Shadow, Critical } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
-import { getGreeting, formatDateLabel, timeRemaining } from '../../lib/helpers';
+import { getGreeting, formatDateLabel, timeRemaining, localDateKey } from '../../lib/helpers';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import BottomSheet from '../../components/BottomSheet';
@@ -40,7 +39,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { theme, isDark, toggleTheme } = useTheme();
   const { logOut } = useAuth();
-  const { todayTasks, completedToday, overdueTasks, streak, mood, moodAdvice, moodAdviceLoading, refreshAI, userName } = useApp();
+  const { todayTasks, completedToday, overdueTasks, streak, refreshAI, userName, moodHistory, mood, moodAdvice, moodAdviceLoading } = useApp();
 
   useFocusEffect(useCallback(() => {
     refreshAI();
@@ -101,14 +100,12 @@ export default function HomeScreen() {
     toggle(false);
   };
 
-  const MOOD_ICONS: Record<string, React.ComponentType<any>> = {
-    awful: AwfulFace, sad: SadFace, okay: NeutralFace, good: GoodFace, great: GreatFace,
-  };
-
   const rotateInterp = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
   const remaining = todayTasks.length - completedToday;
   const pct = todayTasks.length > 0 ? completedToday / todayTasks.length : 0;
   const now = new Date();
+  const todayKey = localDateKey(now);
+  const hasTodayMood = !!moodHistory[todayKey];
   const s = makeStyles(theme);
 
   return (
@@ -162,39 +159,52 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Mood Card ── */}
-      {mood && (
-        <TouchableOpacity style={[s.moodCard, Shadow.card]} onPress={() => setChatOpen(true)} activeOpacity={0.85}>
-          {/* Top row */}
-          <View style={s.moodCardTop}>
-            <View style={s.moodCardIconWrap}>
-              {(() => { const Face = MOOD_ICONS[mood.key] ?? NeutralFace; return <Face size={26} color={theme.text} />; })()}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.moodCardTag}>TODAY'S MOOD</Text>
-              <Text style={s.moodCardName}>Feeling {mood.label}</Text>
-            </View>
-            <View style={s.moodCardActions}>
-              <TouchableOpacity style={s.moodCardBtn} onPress={(e) => { e.stopPropagation(); setCalendarOpen(true); }} activeOpacity={0.7}>
-                <CalendarDays size={14} color="#fff" strokeWidth={2} />
-              </TouchableOpacity>
-              <View style={[s.moodCardBtn, s.moodCardBtnLight]}>
-                <ArrowRight size={14} color="#fff" strokeWidth={2.5} />
-              </View>
-            </View>
-          </View>
-          {/* Advice */}
-          {(moodAdviceLoading || moodAdvice) && (
-            <Text style={s.moodCardAdvice} numberOfLines={2}>
-              {moodAdviceLoading ? 'Getting your daily insight...' : moodAdvice}
-            </Text>
-          )}
-        </TouchableOpacity>
-      )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
 
-        {/* ── Today's Overview ── */}
+        {/* ── Mood Card / Reminder ── */}
+        {hasTodayMood && mood ? (
+          <TouchableOpacity style={[s.moodCard, Shadow.card]} onPress={() => setChatOpen(true)} activeOpacity={0.85}>
+            <View style={s.moodCardTop}>
+              <View style={s.moodCardIconWrap}>
+                <Smile size={22} color={theme.text} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.moodCardTag}>TODAY'S MOOD</Text>
+                <Text style={s.moodCardName}>Feeling {mood.label}</Text>
+              </View>
+              <View style={s.moodCardActions}>
+                <TouchableOpacity style={s.moodCardBtn} onPress={(e) => { e.stopPropagation(); setCalendarOpen(true); }} activeOpacity={0.7}>
+                  <CalendarDays size={14} color="#fff" strokeWidth={2} />
+                </TouchableOpacity>
+                <View style={[s.moodCardBtn, s.moodCardBtnLight]}>
+                  <ArrowRight size={14} color="#fff" strokeWidth={2.5} />
+                </View>
+              </View>
+            </View>
+            {(moodAdviceLoading || moodAdvice) && (
+              <Text style={s.moodCardAdvice} numberOfLines={2}>
+                {moodAdviceLoading ? 'Getting your daily insight...' : moodAdvice}
+              </Text>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={[s.moodCard, Shadow.card]} onPress={() => setMoodOpen(true)} activeOpacity={0.85}>
+            <View style={s.moodCardTop}>
+              <View style={s.moodCardIconWrap}>
+                <Smile size={22} color={theme.text} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.moodCardTag}>MOOD CHECK-IN</Text>
+                <Text style={s.moodCardName}>How are you feeling?</Text>
+              </View>
+              <ArrowRight size={16} color={theme.textMuted} strokeWidth={2} />
+            </View>
+            <Text style={s.moodCardAdvice}>Tap to log your mood and get personalised AI insights for the day.</Text>
+          </TouchableOpacity>
+        )}
+
+{/* ── Today's Overview ── */}
         <View style={[s.card, Shadow.card]}>
           {/* Header */}
           <View style={s.cardHeader}>
@@ -397,14 +407,16 @@ function makeStyles(theme: ReturnType<typeof useTheme>['theme']) {
     progressPct:  { fontSize: 13, fontWeight: '700', color: theme.text },
     progressSub:  { fontSize: 12, color: theme.textMuted },
 
-    insightCard:   { backgroundColor: theme.surface, borderRadius: 20, padding: 18, marginBottom: 20 },
-    insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-    insightLabel:  { fontSize: 11, color: theme.textMuted, letterSpacing: 0.8, fontWeight: '600' },
-    refreshBtn:    { fontSize: 18, color: theme.textMuted },
-    aiMsgText:     { fontSize: 14, fontWeight: '700', color: theme.text, lineHeight: 20, marginBottom: 6 },
-    insightText:   { fontSize: 13, color: theme.textMuted, lineHeight: 19 },
-    insightBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
-    insightBtnText:{ fontSize: 12, color: theme.danger, fontWeight: '600' },
+    insightCard:    { backgroundColor: theme.surface, borderRadius: 20, padding: 18, marginBottom: 12 },
+    insightHeader:  { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+    insightIconWrap:{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' },
+    insightLabel:   { fontSize: 10, color: theme.textMuted, letterSpacing: 0.8, fontWeight: '700', marginBottom: 2 },
+    aiMsgText:      { fontSize: 14, fontWeight: '700', color: theme.text, lineHeight: 20 },
+    refreshIconBtn: { padding: 6 },
+    insightText:    { fontSize: 13, color: theme.textMuted, lineHeight: 19, marginTop: 8 },
+    insightBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 },
+    insightBtnText: { fontSize: 12, color: theme.danger, fontWeight: '600' },
+    refreshBtn:     { fontSize: 18, color: theme.textMuted },
 
 
     sectionLabel: { fontSize: 11, color: theme.textMuted, letterSpacing: 0.8, fontWeight: '600', marginBottom: 10 },
@@ -416,7 +428,7 @@ function makeStyles(theme: ReturnType<typeof useTheme>['theme']) {
     moodCard: {
       backgroundColor: theme.surface, borderRadius: 20,
       paddingHorizontal: 16, paddingVertical: 14,
-      marginHorizontal: 20, marginTop: 16, marginBottom: 4,
+      marginBottom: 12,
     },
     moodCardTop:     { flexDirection: 'row', alignItems: 'center', gap: 12 },
     moodCardIconWrap:{ width: 44, height: 44, borderRadius: 22, backgroundColor: `${theme.accent}12`, alignItems: 'center', justifyContent: 'center' },
