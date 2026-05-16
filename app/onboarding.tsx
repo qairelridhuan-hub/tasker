@@ -409,15 +409,15 @@ export default function Onboarding() {
 
   const goToDashboard = () => {
     Animated.parallel([
-      Animated.timing(exitScale, { toValue: 1.08, duration: 320, useNativeDriver: true }),
-      Animated.timing(exitO,     { toValue: 0,    duration: 280, useNativeDriver: true }),
+      Animated.timing(exitScale, { toValue: 1.08, duration: 200, useNativeDriver: true }),
+      Animated.timing(exitO,     { toValue: 0,    duration: 180, useNativeDriver: true }),
     ]).start(() => router.replace('/(tabs)'));
   };
 
   const goToSignup = () => {
     Animated.parallel([
-      Animated.timing(exitScale, { toValue: 1.08, duration: 320, useNativeDriver: true }),
-      Animated.timing(exitO,     { toValue: 0,    duration: 280, useNativeDriver: true }),
+      Animated.timing(exitScale, { toValue: 1.08, duration: 200, useNativeDriver: true }),
+      Animated.timing(exitO,     { toValue: 0,    duration: 180, useNativeDriver: true }),
     ]).start(() => router.replace('/(auth)/signup'));
   };
 
@@ -429,18 +429,18 @@ export default function Onboarding() {
 
   function playEntry() {
     setIconAnimKey(k => k + 1);
-    Animated.stagger(50, [
+    Animated.stagger(35, [
       Animated.parallel([
-        Animated.timing(tagY, { toValue: 0, duration: 220, useNativeDriver: true }),
-        Animated.timing(tagO, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(tagY, { toValue: 0, duration: 145, useNativeDriver: true }),
+        Animated.timing(tagO, { toValue: 1, duration: 145, useNativeDriver: true }),
       ]),
       Animated.parallel([
         Animated.spring(iconS, { toValue: 1, damping: 14, stiffness: 160, useNativeDriver: true }),
-        Animated.timing(iconO, { toValue: 1, duration: 240, useNativeDriver: true }),
+        Animated.timing(iconO, { toValue: 1, duration: 160, useNativeDriver: true }),
       ]),
       Animated.parallel([
-        Animated.timing(textY, { toValue: 0, duration: 240, useNativeDriver: true }),
-        Animated.timing(textO, { toValue: 1, duration: 240, useNativeDriver: true }),
+        Animated.timing(textY, { toValue: 0, duration: 160, useNativeDriver: true }),
+        Animated.timing(textO, { toValue: 1, duration: 160, useNativeDriver: true }),
       ]),
     ]).start();
   }
@@ -458,8 +458,8 @@ export default function Onboarding() {
     inX.setValue(dirRef.current * DIST);
     resetEntry();
     Animated.parallel([
-      Animated.timing(outX, { toValue: dirRef.current * -DIST, duration: 300, useNativeDriver: true }),
-      Animated.timing(inX,  { toValue: 0, duration: 300, useNativeDriver: true }),
+      Animated.timing(outX, { toValue: dirRef.current * -DIST, duration: 200, useNativeDriver: true }),
+      Animated.timing(inX,  { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => {
       setPrevIndex(null);
       busy.current = false;
@@ -489,36 +489,36 @@ export default function Onboarding() {
     taglineY.setValue(16); taglineO.setValue(0);
     btnO.setValue(0); btnY.setValue(20);
 
-    Animated.timing(splashO, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+    Animated.timing(splashO, { toValue: 1, duration: 160, useNativeDriver: true }).start();
     Animated.parallel([
       Animated.spring(logoScale, { toValue: 1, damping: 14, stiffness: 160, useNativeDriver: true }),
-      Animated.timing(logoO, { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.timing(logoO, { toValue: 1, duration: 220, useNativeDriver: true }),
     ]).start();
 
     Animated.sequence([
-      Animated.timing(fillAnim, { toValue: 1, duration: 700, delay: 150, useNativeDriver: false }),
-      Animated.delay(80),
+      Animated.timing(fillAnim, { toValue: 1, duration: 450, delay: 100, useNativeDriver: false }),
+      Animated.delay(50),
       Animated.parallel([
-        Animated.timing(iconSwapO, { toValue: 0, duration: 180, delay: 100, useNativeDriver: true }),
-        Animated.timing(checkSwapO, { toValue: 1, duration: 220, delay: 140, useNativeDriver: true }),
+        Animated.timing(iconSwapO, { toValue: 0, duration: 120, delay: 65, useNativeDriver: true }),
+        Animated.timing(checkSwapO, { toValue: 1, duration: 145, delay: 90, useNativeDriver: true }),
       ]),
-      Animated.delay(60),
+      Animated.delay(40),
       Animated.parallel([
-        Animated.timing(ringO, { toValue: 1, duration: 100, useNativeDriver: true }),
+        Animated.timing(ringO, { toValue: 1, duration: 65, useNativeDriver: true }),
         Animated.spring(ringScale, { toValue: 1.45, damping: 6, stiffness: 120, useNativeDriver: true }),
       ]),
-      Animated.timing(ringO, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(ringO, { toValue: 0, duration: 130, useNativeDriver: true }),
       Animated.parallel([
-        Animated.timing(titleO, { toValue: 1, duration: 260, useNativeDriver: true }),
+        Animated.timing(titleO, { toValue: 1, duration: 170, useNativeDriver: true }),
         Animated.spring(titleY, { toValue: 0, damping: 14, stiffness: 160, useNativeDriver: true }),
       ]),
       Animated.parallel([
-        Animated.timing(taglineO, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(taglineO, { toValue: 1, duration: 145, useNativeDriver: true }),
         Animated.spring(taglineY, { toValue: 0, damping: 14, stiffness: 160, useNativeDriver: true }),
       ]),
-      Animated.delay(350),
+      Animated.delay(200),
       Animated.parallel([
-        Animated.timing(btnO,  { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(btnO,  { toValue: 1, duration: 195, useNativeDriver: true }),
         Animated.spring(btnY, { toValue: 0, damping: 12, stiffness: 140, useNativeDriver: true }),
       ]),
     ]).start();

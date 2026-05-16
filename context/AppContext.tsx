@@ -100,19 +100,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [userId]);
 
-  // Subscribe mood history from Firestore — restore today's mood or clear if new day
+  // Subscribe mood history from Firestore — mood state is always driven by Firestore
   useEffect(() => {
     if (!userId) { setMoodHistory({}); setMoodState(null); return; }
     return subscribeMoods(userId, (history) => {
       setMoodHistory(history);
       const todayKey = localDateKey();
       const todayMoodKey = history[todayKey];
-      if (todayMoodKey) {
-        const found = MOODS.find(m => m.key === todayMoodKey);
-        if (found) setMoodState(found);
-      } else {
-        setMoodState(null); // new day — require fresh check-in
-      }
+      const found = todayMoodKey ? MOODS.find(m => m.key === todayMoodKey) ?? null : null;
+      setMoodState(found);
     });
   }, [userId]);
 

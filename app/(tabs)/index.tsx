@@ -39,7 +39,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { theme, isDark, toggleTheme } = useTheme();
   const { logOut } = useAuth();
-  const { todayTasks, completedToday, overdueTasks, streak, refreshAI, userName, moodHistory, mood, moodAdvice, moodAdviceLoading } = useApp();
+  const { todayTasks, completedToday, overdueTasks, streak, refreshAI, userName, moodHistory, mood, moodAdvice } = useApp();
 
   useFocusEffect(useCallback(() => {
     refreshAI();
@@ -116,7 +116,7 @@ export default function HomeScreen() {
           <Text style={s.greeting}>{getGreeting()}{userName ? `, ${userName.split(' ')[0]}` : ''}</Text>
           <Text style={s.date}>{formatDateLabel(new Date())}</Text>
 
-          {/* FAB row — directly below date */}
+          {/* FAB row */}
           <View style={s.fabContainer}>
             <TouchableOpacity style={s.mainFab} onPress={() => toggle(!expanded)} activeOpacity={0.85}>
               <Animated.View style={{ transform: [{ rotate: rotateInterp }] }}>
@@ -162,45 +162,35 @@ export default function HomeScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
 
-        {/* ── Mood Card / Reminder ── */}
+        {/* ── Mood Card ── */}
         {hasTodayMood && mood ? (
           <TouchableOpacity style={[s.moodCard, Shadow.card]} onPress={() => setChatOpen(true)} activeOpacity={0.85}>
-            <View style={s.moodCardTop}>
-              <View style={s.moodCardIconWrap}>
-                <Smile size={22} color={theme.text} strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.moodCardTag}>TODAY'S MOOD</Text>
-                <Text style={s.moodCardName}>Feeling {mood.label}</Text>
-              </View>
-              <View style={s.moodCardActions}>
-                <TouchableOpacity style={s.moodCardBtn} onPress={(e) => { e.stopPropagation(); setCalendarOpen(true); }} activeOpacity={0.7}>
-                  <CalendarDays size={14} color="#fff" strokeWidth={2} />
-                </TouchableOpacity>
-                <View style={[s.moodCardBtn, s.moodCardBtnLight]}>
-                  <ArrowRight size={14} color="#fff" strokeWidth={2.5} />
-                </View>
+            <View style={s.moodCardIconWrap}>
+              <Smile size={22} color={theme.text} strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.moodCardName} numberOfLines={1}>Feeling {mood.label}</Text>
+              {moodAdvice ? <Text style={s.moodCardSub} numberOfLines={1}>{moodAdvice}</Text> : null}
+            </View>
+            <View style={s.moodCardActions}>
+              <TouchableOpacity style={s.moodCardBtn} onPress={(e) => { e.stopPropagation(); setCalendarOpen(true); }} activeOpacity={0.7}>
+                <CalendarDays size={20} color="#fff" strokeWidth={2} />
+              </TouchableOpacity>
+              <View style={[s.moodCardBtn, s.moodCardBtnLight]}>
+                <ArrowRight size={20} color="#fff" strokeWidth={2.5} />
               </View>
             </View>
-            {(moodAdviceLoading || moodAdvice) && (
-              <Text style={s.moodCardAdvice} numberOfLines={2}>
-                {moodAdviceLoading ? 'Getting your daily insight...' : moodAdvice}
-              </Text>
-            )}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[s.moodCard, Shadow.card]} onPress={() => setMoodOpen(true)} activeOpacity={0.85}>
-            <View style={s.moodCardTop}>
-              <View style={s.moodCardIconWrap}>
-                <Smile size={22} color={theme.text} strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.moodCardTag}>MOOD CHECK-IN</Text>
-                <Text style={s.moodCardName}>How are you feeling?</Text>
-              </View>
-              <ArrowRight size={16} color={theme.textMuted} strokeWidth={2} />
+            <View style={s.moodCardIconWrap}>
+              <Smile size={22} color={theme.textMuted} strokeWidth={2} />
             </View>
-            <Text style={s.moodCardAdvice}>Tap to log your mood and get personalised AI insights for the day.</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.moodCardName}>How are you feeling?</Text>
+              <Text style={s.moodCardSub} numberOfLines={1}>Tap to log your mood for today</Text>
+            </View>
+            <ArrowRight size={16} color={theme.textMuted} strokeWidth={2} />
           </TouchableOpacity>
         )}
 
@@ -351,7 +341,6 @@ function makeStyles(theme: ReturnType<typeof useTheme>['theme']) {
 
     header: {
       paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4,
-      paddingRight: 64, // reserve space for the collapsed pill
     },
     greeting: { fontSize: 18, fontWeight: '700', color: theme.text, letterSpacing: -0.3 },
     date:     { fontSize: 12, color: theme.textMuted, marginTop: 2 },
@@ -372,7 +361,7 @@ function makeStyles(theme: ReturnType<typeof useTheme>['theme']) {
     fabContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      justifyContent: 'space-between',
       marginTop: 12,
     },
     mainFab: {
@@ -426,18 +415,27 @@ function makeStyles(theme: ReturnType<typeof useTheme>['theme']) {
     chipTime:     { fontSize: 11, color: theme.textMuted },
 
     moodCard: {
-      backgroundColor: theme.surface, borderRadius: 20,
-      paddingHorizontal: 16, paddingVertical: 14,
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: theme.surface, borderRadius: 999,
+      paddingHorizontal: 10, paddingVertical: 10,
       marginBottom: 12,
     },
+    moodPillRow:         { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+    moodPill:            { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: theme.surface, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
+    moodPillReminder:    { borderWidth: 1, borderColor: theme.border, borderStyle: 'dashed' },
+    moodPillText:        { fontSize: 13, fontWeight: '600', color: theme.text },
+    moodPillAdvice:      { flex: 1, fontSize: 12, color: theme.textMuted },
+    moodPillReminderText:{ flex: 1, fontSize: 13, color: theme.textMuted },
+    moodPillIcon:        { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border },
     moodCardTop:     { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    moodCardIconWrap:{ width: 44, height: 44, borderRadius: 22, backgroundColor: `${theme.accent}12`, alignItems: 'center', justifyContent: 'center' },
-    moodCardTag:     { fontSize: 10, fontWeight: '700', color: theme.textMuted, letterSpacing: 0.8, marginBottom: 2 },
-    moodCardName:    { fontSize: 16, fontWeight: '700', color: theme.text },
+    moodCardIconWrap:{ width: 46, height: 46, borderRadius: 23, backgroundColor: `${theme.accent}12`, alignItems: 'center', justifyContent: 'center' },
+    moodCardTag:     { fontSize: 10, fontWeight: '700', color: theme.textMuted, letterSpacing: 0.8, marginBottom: 1 },
+    moodCardName:    { fontSize: 12, fontWeight: '700', color: theme.text },
     moodCardActions: { flexDirection: 'row', gap: 6 },
-    moodCardBtn:     { width: 30, height: 30, borderRadius: 15, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center' },
+    moodCardBtn:     { width: 46, height: 46, borderRadius: 23, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center' },
     moodCardBtnLight:{ backgroundColor: '#444' },
     moodCardAdvice:  { fontSize: 13, color: theme.textMuted, lineHeight: 19, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.border },
+    moodCardSub:     { fontSize: 11, color: theme.textMuted, marginTop: 1 },
 
     cardSubLabel: { fontSize: 12, color: theme.textMuted, marginTop: 2 },
     jumpBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#111', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
